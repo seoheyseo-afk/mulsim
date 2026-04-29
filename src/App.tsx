@@ -29,6 +29,7 @@ import {
   createItemFromDraft,
   defaultRoomPlacements,
   makeId,
+  normalizeCategory,
   today,
 } from "./seed";
 import {
@@ -135,7 +136,7 @@ const initialDraft: IntakeDraft = {
   price: "",
   link: "",
   imageUrl: "",
-  category: "생활소품",
+  category: "일상잡화",
   desireReason: "",
   expectedEffect: "",
   firstWantedDate: today(),
@@ -206,7 +207,7 @@ function App() {
 
   const selectedItem = items.find((item) => item.id === selectedId) ?? null;
   const categories = useMemo(
-    () => mergeCategories([...CATEGORIES, ...customCategories, ...items.map((item) => item.category)]),
+    () => mergeCategories([...CATEGORIES, ...customCategories, ...items.map((item) => normalizeCategory(item.category))]),
     [customCategories, items],
   );
 

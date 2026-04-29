@@ -1,3 +1,4 @@
+import { normalizeCategory } from "./seed";
 import type { MulsimItem } from "./types";
 
 const ITEMS_KEY = "mulsim.items.v1";
@@ -31,7 +32,10 @@ export function loadItems(): MulsimItem[] | null {
     if (!Array.isArray(parsed)) {
       return null;
     }
-    return isOnlyLegacySampleItems(parsed) ? [] : (parsed as MulsimItem[]);
+    if (isOnlyLegacySampleItems(parsed)) {
+      return [];
+    }
+    return migrateItems(parsed as MulsimItem[]);
   } catch {
     return null;
   }
@@ -58,6 +62,13 @@ function isOnlyLegacySampleItems(items: MulsimItem[]) {
       ),
     )
   );
+}
+
+function migrateItems(items: MulsimItem[]) {
+  return items.map((item) => {
+    const category = normalizeCategory(item.category);
+    return category === item.category ? item : { ...item, category };
+  });
 }
 
 export function loadCustomCategories(): string[] {

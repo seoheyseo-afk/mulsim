@@ -6,16 +6,41 @@ import type {
   StickerType,
 } from "./types";
 
-export const CATEGORIES = ["전자기기", "가구", "화장품/향수", "수납용품", "생활소품", "취미용품"];
+export const CATEGORIES = [
+  "전자기기",
+  "가구·인테리어",
+  "정리·수납",
+  "의류·패션잡화",
+  "화장품·향수",
+  "문구·도서·콘텐츠",
+  "생활·주방",
+  "취미·건강",
+  "일상잡화",
+];
+
+const LEGACY_CATEGORY_MAP: Record<string, string> = {
+  가구: "가구·인테리어",
+  수납용품: "정리·수납",
+  "화장품/향수": "화장품·향수",
+  생활소품: "일상잡화",
+  취미용품: "취미·건강",
+};
 
 export const CATEGORY_PRESETS: Record<string, string[]> = {
   전자기기: ["전원 위치", "케이블 정리", "소모품", "기기 연결", "소음"],
-  가구: ["배송 크기", "조립 난이도", "기존 물건 처분", "둘 자리"],
-  "화장품/향수": ["보관 자리", "기존 제품과 겹침", "사용 빈도", "향/성분 확인"],
-  수납용품: ["둘 자리", "기존 물건 정리", "실제 수납 대상", "꺼내기 쉬움"],
-  생활소품: ["청소 난이도", "기존 물건과 겹침", "자주 쓰는 위치", "보관 방식"],
-  취미용품: ["사용 시간", "보관 자리", "소모품 비용", "정리 방식"],
+  "가구·인테리어": ["배송 크기", "조립 난이도", "기존 물건 처분", "둘 자리", "방 분위기"],
+  "정리·수납": ["둘 자리", "기존 물건 정리", "실제 수납 대상", "꺼내기 쉬움", "넘치지 않을 양"],
+  "의류·패션잡화": ["보관 자리", "기존 옷과 겹침", "입을 상황", "관리 난이도", "계절성"],
+  "화장품·향수": ["보관 자리", "기존 제품과 겹침", "사용 빈도", "향/성분 확인", "유통기한"],
+  "문구·도서·콘텐츠": ["둘 자리", "읽거나 쓸 시간", "기존 자료와 겹침", "반복 사용", "구독 여부"],
+  "생활·주방": ["사용 위치", "세척 난이도", "소모품 비용", "기존 물건과 겹침", "위생 관리"],
+  "취미·건강": ["사용 시간", "보관 자리", "소모품 비용", "꾸준히 쓸지", "소음/공간"],
+  일상잡화: ["청소 난이도", "기존 물건과 겹침", "자주 쓰는 위치", "보관 방식", "없어도 되는지"],
 };
+
+export function normalizeCategory(category: string) {
+  return LEGACY_CATEGORY_MAP[category] ?? category;
+}
 
 export function makeId(prefix: string) {
   return `${prefix}_${crypto.randomUUID?.() ?? `${Date.now()}_${Math.random().toString(16).slice(2)}`}`;
@@ -26,7 +51,8 @@ export function today() {
 }
 
 export function createConditionChecks(category: string): ConditionChecks {
-  const preset = CATEGORY_PRESETS[category] ?? CATEGORY_PRESETS["생활소품"];
+  const normalizedCategory = normalizeCategory(category);
+  const preset = CATEGORY_PRESETS[normalizedCategory] ?? CATEGORY_PRESETS["일상잡화"];
 
   return {
     installRequired: false,
