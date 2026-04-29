@@ -1,16 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="들일까 앱 아이콘">
   <rect width="512" height="512" rx="112" fill="#f8e9ee" />
   <rect x="50" y="50" width="412" height="412" rx="92" fill="#fff9fa" stroke="#8f5267" stroke-width="14" />
-  <path d="M124 174h264l70 215H54z" fill="#f4dce4" stroke="#d9a1b1" stroke-width="8" />
-  <path d="M164 220h184v138H164z" fill="#c98fa2" stroke="#8f5267" stroke-width="11" stroke-linejoin="round" />
-  <path d="M164 220l92-44 92 44-92 46z" fill="#f0beca" stroke="#8f5267" stroke-width="9" stroke-linejoin="round" />
-  <path d="M256 266v92" stroke="#8f5267" stroke-width="9" stroke-linecap="round" />
   <path
-    d="M256 165c-29-24-73-6-73 31 0 45 73 82 73 82s73-37 73-82c0-37-44-55-73-31z"
+    d="M256 128c-16-15-43-5-43 18 0 27 43 49 43 49s43-22 43-49c0-23-27-33-43-18z"
     fill="#8f5267"
   />
-  <circle cx="130" cy="138" r="10" fill="#c98fa2" />
-  <circle cx="384" cy="144" r="8" fill="#c98fa2" />
-  <path d="M138 394l11 25 25 11-25 11-11 25-11-25-25-11 25-11z" fill="#8f5267" />
-  <path d="M376 396l10 22 22 10-22 10-10 22-10-22-22-10 22-10z" fill="#8f5267" />
+  <path d="M126 238h260l52 142H74z" fill="#f4dce4" stroke="#d9a1b1" stroke-width="8" />
+  <path d="M166 262h180v112H166z" fill="#c98fa2" stroke="#8f5267" stroke-width="11" stroke-linejoin="round" />
+  <path d="M166 262l90-48 90 48-90 48z" fill="#f0beca" stroke="#8f5267" stroke-width="9" stroke-linejoin="round" />
+  <path d="M256 310v64" stroke="#8f5267" stroke-width="9" stroke-linecap="round" />
 </svg>
