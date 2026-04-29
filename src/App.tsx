@@ -1505,7 +1505,11 @@ function RoomPlanner({
           >
             <Eraser size={17} />빈 방
           </button>
-          <button className="ghost-button" type="button" onClick={() => void downloadSnapshot(roomShellRef.current, item.name)}>
+          <button
+            className="ghost-button"
+            type="button"
+            onClick={() => void downloadSnapshot(roomShellRef.current, item.name, visiblePlacements, imageSources)}
+          >
             <Download size={17} />
             스냅샷 저장
           </button>
@@ -1847,7 +1851,7 @@ function AftercareTab({ item, onChange }: { item: MulsimItem; onChange: (item: M
               ))}
             </select>
           </label>
-          <label>
+          <label className="aftercare-date-field">
             날짜
             <input type="date" value={draft.date} onChange={(event) => updateDraft("date", event.target.value)} />
           </label>
@@ -2103,11 +2107,29 @@ function mergeCategories(categories: string[]) {
   }, []);
 }
 
-async function downloadSnapshot(roomShell: HTMLElement | null, itemName: string) {
+async function downloadSnapshot(
+  roomShell: HTMLElement | null,
+  itemName: string,
+  placements: RoomPlacement[],
+  imageSources: ImageSources,
+) {
   if (!roomShell) {
     return;
   }
 
+  const fileBase = `mulsim-${sanitizeFilename(itemName)}-snapshot`;
+
+  try {
+    const blob = await renderDomSnapshotAsPng(roomShell);
+    downloadBlob(blob, `${fileBase}.png`);
+    return;
+  } catch {
+    const blob = await renderCanvasSnapshotAsPng(roomShell, placements, imageSources);
+    downloadBlob(blob, `${fileBase}.png`);
+  }
+}
+
+async function renderDomSnapshotAsPng(roomShell: HTMLElement) {
   const rect = roomShell.getBoundingClientRect();
   const width = Math.max(1, Math.ceil(rect.width));
   const height = Math.max(1, Math.ceil(rect.height));
@@ -2125,7 +2147,6 @@ async function downloadSnapshot(roomShell: HTMLElement | null, itemName: string)
   const html = `<div xmlns="http://www.w3.org/1999/xhtml"><style>${toCdata(css)}</style>${serializeSnapshotElement(clone)}</div>`;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><foreignObject width="100%" height="100%">${html}</foreignObject></svg>`;
   const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-  const fileBase = `mulsim-${sanitizeFilename(itemName)}-snapshot`;
   const url = URL.createObjectURL(svgBlob);
 
   try {
@@ -2140,19 +2161,351 @@ async function downloadSnapshot(roomShell: HTMLElement | null, itemName: string)
     }
     context.scale(scale, scale);
     context.drawImage(image, 0, 0, width, height);
-
-    canvas.toBlob((blob) => {
-      if (blob) {
-        downloadBlob(blob, `${fileBase}.png`);
-      } else {
-        downloadBlob(svgBlob, `${fileBase}.svg`);
-      }
-    }, "image/png");
-  } catch {
-    downloadBlob(svgBlob, `${fileBase}.svg`);
+    return await canvasToPngBlob(canvas);
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+async function renderCanvasSnapshotAsPng(roomShell: HTMLElement, placements: RoomPlacement[], imageSources: ImageSources) {
+  const rect = roomShell.getBoundingClientRect();
+  const width = Math.max(1, Math.ceil(rect.width));
+  const height = Math.max(1, Math.ceil(rect.height));
+  const scale = 2;
+  const canvas = document.createElement("canvas");
+  canvas.width = width * scale;
+  canvas.height = height * scale;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Canvas context is unavailable.");
+  }
+
+  context.scale(scale, scale);
+  drawRoomSnapshotBase(context, width, height);
+
+  const layerLeft = width <= 680 ? width * 0.04 : width * 0.07;
+  const layerTop = height * 0.2;
+  const layerWidth = width - layerLeft * 2;
+  const layerHeight = height - layerTop - height * 0.06;
+  const orderedPlacements = [...placements].sort((a, b) => a.zIndex - b.zIndex);
+
+  for (const placement of orderedPlacements) {
+    const x = layerLeft + (placement.x / 100) * layerWidth;
+    const y = layerTop + (placement.y / 100) * layerHeight;
+    const placementWidth = (placement.width / 100) * layerWidth;
+    const placementHeight = (placement.height / 100) * layerHeight;
+    await drawPlacementSnapshot(context, placement, imageSources, x, y, placementWidth, placementHeight);
+  }
+
+  return canvasToPngBlob(canvas);
+}
+
+function drawRoomSnapshotBase(context: CanvasRenderingContext2D, width: number, height: number) {
+  const shellGradient = context.createLinearGradient(0, 0, width, height);
+  shellGradient.addColorStop(0, "#fffafb");
+  shellGradient.addColorStop(1, "#f8f5f0");
+  context.fillStyle = shellGradient;
+  context.fillRect(0, 0, width, height);
+
+  const glow = context.createRadialGradient(width * 0.45, height * 0.3, 0, width * 0.45, height * 0.3, width * 0.45);
+  glow.addColorStop(0, "rgba(255,255,255,0.78)");
+  glow.addColorStop(1, "rgba(255,255,255,0)");
+  context.fillStyle = glow;
+  context.fillRect(0, 0, width, height);
+
+  drawPolygon(
+    context,
+    [
+      [width * 0.12 + width * 0.76 * 0.04, height * 0.04],
+      [width * 0.12 + width * 0.76 * 0.96, height * 0.04],
+      [width * 0.88, height * 0.21],
+      [width * 0.12, height * 0.21],
+    ],
+    "#f4d8df",
+    "rgba(143,82,103,0.18)",
+    2,
+  );
+  drawPolygon(
+    context,
+    [
+      [width * 0.03 + width * 0.13 * 0.68, height * 0.2],
+      [width * 0.16, height * 0.2],
+      [width * 0.03 + width * 0.13 * 0.92, height * 0.92],
+      [width * 0.03, height * 0.2 + height * 0.72 * 0.9],
+    ],
+    "#f3d6de",
+    "rgba(143,82,103,0.18)",
+    2,
+  );
+  drawPolygon(
+    context,
+    [
+      [width * 0.84, height * 0.2],
+      [width * 0.84 + width * 0.13 * 0.32, height * 0.2],
+      [width * 0.97, height * 0.2 + height * 0.72 * 0.9],
+      [width * 0.84 + width * 0.13 * 0.08, height * 0.92],
+    ],
+    "#f3d6de",
+    "rgba(143,82,103,0.18)",
+    2,
+  );
+
+  const floorLeft = width <= 680 ? width * 0.04 : width * 0.07;
+  const floorRight = width - floorLeft;
+  const floorTop = height * 0.2;
+  const floorBottom = height * 0.94;
+  drawPolygon(
+    context,
+    [
+      [floorLeft + (floorRight - floorLeft) * 0.08, floorTop],
+      [floorLeft + (floorRight - floorLeft) * 0.92, floorTop],
+      [floorRight, floorBottom],
+      [floorLeft, floorBottom],
+    ],
+    "#f6dfe5",
+    "rgba(143,82,103,0.18)",
+    2,
+  );
+
+  context.save();
+  context.globalAlpha = 0.32;
+  context.strokeStyle = "rgba(143,82,103,0.16)";
+  context.lineWidth = 1;
+  for (let x = floorLeft + 24; x < floorRight; x += 82) {
+    context.beginPath();
+    context.moveTo(x, floorTop);
+    context.lineTo(x, floorBottom);
+    context.stroke();
+  }
+  for (let y = floorTop + 44; y < floorBottom; y += 68) {
+    context.beginPath();
+    context.moveTo(floorLeft, y);
+    context.lineTo(floorRight, y);
+    context.stroke();
+  }
+  context.restore();
+}
+
+async function drawPlacementSnapshot(
+  context: CanvasRenderingContext2D,
+  placement: RoomPlacement,
+  imageSources: ImageSources,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  context.save();
+  context.translate(x + width / 2, y + height / 2);
+  context.rotate((placement.rotation * Math.PI) / 180);
+  context.shadowColor = "rgba(143,82,103,0.2)";
+  context.shadowBlur = 9;
+  context.shadowOffsetY = 10;
+
+  const src = placement.imageId ? imageSources[placement.imageId] : placement.imageSrc;
+  if (placement.type === "item" && src && isCanvasSafeSnapshotSource(src)) {
+    try {
+      const image = await loadImage(src);
+      drawImageContain(context, image, -width / 2, -height / 2, width, height);
+      context.restore();
+      return;
+    } catch {
+      // Fall back to a drawn label when an uploaded image cannot be decoded.
+    }
+  }
+
+  if (placement.type === "item") {
+    drawFallbackItemSnapshot(context, placement.name, -width / 2, -height / 2, width, height);
+  } else {
+    drawSimpleSnapshotSticker(context, placement.stickerType, -width / 2, -height / 2, width, height);
+  }
+  context.restore();
+}
+
+function drawSimpleSnapshotSticker(
+  context: CanvasRenderingContext2D,
+  stickerType: StickerType | undefined,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  switch (stickerType) {
+    case "rug":
+      drawEllipse(context, x, y, width, height, "#f0beca", "#d99aac", 3);
+      drawEllipse(context, x + width * 0.18, y + height * 0.2, width * 0.64, height * 0.6, "rgba(255,249,250,0.7)");
+      return;
+    case "bed":
+      drawRoundedRect(context, x, y, width, height, 14, "#fff9fa", "#8f5267", 3);
+      drawRoundedRect(context, x + width * 0.1, y + height * 0.08, width * 0.8, height * 0.84, 10, "#ffffff");
+      drawRoundedRect(context, x + width * 0.1, y + height * 0.48, width * 0.8, height * 0.38, 8, "#c98fa2");
+      return;
+    case "bookshelf":
+      drawRoundedRect(context, x, y, width, height, 6, "#fff9fa", "#8f5267", 3);
+      context.strokeStyle = "#d6a0af";
+      context.lineWidth = 3;
+      [0.28, 0.52, 0.76].forEach((ratio) => {
+        context.beginPath();
+        context.moveTo(x + width * 0.08, y + height * ratio);
+        context.lineTo(x + width * 0.92, y + height * ratio);
+        context.stroke();
+      });
+      return;
+    case "chair":
+      drawRoundedRect(context, x + width * 0.18, y + height * 0.05, width * 0.64, height * 0.48, 18, "#d899aa", "#8f5267", 3);
+      drawRoundedRect(context, x + width * 0.12, y + height * 0.48, width * 0.76, height * 0.3, 13, "#c98fa2", "#8f5267", 3);
+      return;
+    case "mirror":
+      drawRoundedRect(context, x + width * 0.15, y, width * 0.7, height, height * 0.36, "#d9a1b1", "#8f5267", 3);
+      drawRoundedRect(context, x + width * 0.28, y + height * 0.14, width * 0.44, height * 0.76, height * 0.24, "rgba(255,255,255,0.78)");
+      return;
+    case "plant":
+      drawRoundedRect(context, x + width * 0.24, y + height * 0.58, width * 0.52, height * 0.32, 5, "#d99aac", "#8f5267", 3);
+      drawEllipse(context, x + width * 0.24, y + height * 0.1, width * 0.3, height * 0.28, "#f0beca");
+      drawEllipse(context, x + width * 0.48, y + height * 0.14, width * 0.32, height * 0.3, "#c98fa2");
+      return;
+    case "vase":
+    case "perfume":
+    case "lamp":
+    case "storage":
+    case "console":
+    case "desk":
+    case "triangle-desk":
+    case "cushion":
+    default:
+      drawRoundedRect(context, x, y, width, height, 10, "#fff6f8", "#8f5267", 3);
+      drawRoundedRect(context, x + width * 0.18, y + height * 0.24, width * 0.64, height * 0.38, 8, "#f0beca");
+  }
+}
+
+function drawFallbackItemSnapshot(
+  context: CanvasRenderingContext2D,
+  name: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  drawRoundedRect(context, x, y, width, height, 14, "#8f5267");
+  context.shadowColor = "transparent";
+  context.fillStyle = "#ffffff";
+  context.font = "700 12px 'Noto Sans KR', sans-serif";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText(name.slice(0, 10), x + width / 2, y + height / 2);
+}
+
+function drawImageContain(
+  context: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight);
+  const imageWidth = image.naturalWidth * scale;
+  const imageHeight = image.naturalHeight * scale;
+  context.drawImage(image, x + (width - imageWidth) / 2, y + (height - imageHeight) / 2, imageWidth, imageHeight);
+}
+
+function isCanvasSafeSnapshotSource(src: string) {
+  return src.startsWith("data:") || src.startsWith("blob:") || src.startsWith(window.location.origin) || src.startsWith("/");
+}
+
+function drawPolygon(
+  context: CanvasRenderingContext2D,
+  points: Array<[number, number]>,
+  fill: string,
+  stroke?: string,
+  lineWidth = 1,
+) {
+  context.beginPath();
+  points.forEach(([x, y], index) => {
+    if (index === 0) {
+      context.moveTo(x, y);
+    } else {
+      context.lineTo(x, y);
+    }
+  });
+  context.closePath();
+  context.fillStyle = fill;
+  context.fill();
+  if (stroke) {
+    context.strokeStyle = stroke;
+    context.lineWidth = lineWidth;
+    context.stroke();
+  }
+}
+
+function drawRoundedRect(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+  fill: string,
+  stroke?: string,
+  lineWidth = 1,
+) {
+  const safeRadius = Math.min(radius, width / 2, height / 2);
+  context.beginPath();
+  context.moveTo(x + safeRadius, y);
+  context.lineTo(x + width - safeRadius, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
+  context.lineTo(x + width, y + height - safeRadius);
+  context.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
+  context.lineTo(x + safeRadius, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
+  context.lineTo(x, y + safeRadius);
+  context.quadraticCurveTo(x, y, x + safeRadius, y);
+  context.closePath();
+  context.fillStyle = fill;
+  context.fill();
+  if (stroke) {
+    context.strokeStyle = stroke;
+    context.lineWidth = lineWidth;
+    context.stroke();
+  }
+}
+
+function drawEllipse(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  fill: string,
+  stroke?: string,
+  lineWidth = 1,
+) {
+  context.beginPath();
+  context.ellipse(x + width / 2, y + height / 2, width / 2, height / 2, 0, 0, Math.PI * 2);
+  context.fillStyle = fill;
+  context.fill();
+  if (stroke) {
+    context.strokeStyle = stroke;
+    context.lineWidth = lineWidth;
+    context.stroke();
+  }
+}
+
+function canvasToPngBlob(canvas: HTMLCanvasElement) {
+  return new Promise<Blob>((resolve, reject) => {
+    try {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error("Snapshot PNG export failed."));
+        }
+      }, "image/png");
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 function serializeSnapshotElement(element: HTMLElement) {

@@ -663,6 +663,12 @@ a {
 .aftercare-form input[type="date"] {
   min-width: 0;
   max-width: 100%;
+  inline-size: 100%;
+  max-inline-size: 100%;
+}
+
+.aftercare-date-field {
+  min-width: 0;
 }
 
 .span-2 {
@@ -1309,7 +1315,15 @@ a {
   }
 
   .aftercare-form input[type="date"] {
-    width: calc(100% - 2px);
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .aftercare-date-field {
+    width: calc(100% - 10px);
+    max-width: calc(100% - 10px);
+    justify-self: start;
   }
 
   .room-shell {
