@@ -1309,10 +1309,7 @@ function ConditionsTab({ item, onChange }: { item: MulsimItem; onChange: (item: 
       <section className="panel">
         <div className="panel-heading">
           <ClipboardCheck size={19} />
-          <div>
-            <span className="eyebrow">{item.category}</span>
-            <h2>카테고리별 체크리스트</h2>
-          </div>
+          <h2>{item.category} 체크리스트</h2>
         </div>
         <div className="check-grid single">
           {item.conditionChecks.categoryChecklist.map((check) => (

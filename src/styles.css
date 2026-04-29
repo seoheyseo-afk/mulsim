@@ -656,6 +656,15 @@ a {
   row-gap: 10px;
 }
 
+.aftercare-form label {
+  min-width: 0;
+}
+
+.aftercare-form input[type="date"] {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .span-2 {
   grid-column: span 2;
 }
@@ -1297,6 +1306,10 @@ a {
 
   .aftercare-regret textarea {
     min-height: 132px;
+  }
+
+  .aftercare-form input[type="date"] {
+    width: calc(100% - 2px);
   }
 
   .room-shell {
