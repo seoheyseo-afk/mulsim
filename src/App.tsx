@@ -100,6 +100,7 @@ const STATUS_SELECT_LABELS: Record<ItemStatus, string> = {
   ...STATUS_DISPLAY_LABELS,
   "현장방문 대기": "현장방문 스티커",
 };
+const DECISION_SELECT_VALUE = "__decision_prompt";
 
 const DECISION_STATUSES: ItemStatus[] = ["승인보류", "입주승인 가능", "입주완료", "사후관리 대기", "심사종료"];
 const VISIT_NO_LONGER_REQUIRED_STATUSES: ItemStatus[] = ["입주완료", "사후관리 대기", "심사종료"];
@@ -136,7 +137,7 @@ function getStatusSelectLabel(status: ItemStatus) {
 }
 
 function getStatusBadgeText(item: MulsimItem) {
-  return needsDecision(item) ? "아래 결정을 내려주세요" : STATUS_DISPLAY_LABELS[item.status];
+  return needsDecision(item) ? "이제 결정을 내려주세요" : STATUS_DISPLAY_LABELS[item.status];
 }
 
 function getStatusMessage(item: MulsimItem) {
@@ -809,7 +810,15 @@ function DetailPage({
           <div className="status-controls">
             <label>
               상태 변경
-              <select value={item.status} onChange={(event) => updateStatus(event.target.value as ItemStatus)}>
+              <select
+                value={needsDecision(item) ? DECISION_SELECT_VALUE : item.status}
+                onChange={(event) => updateStatus(event.target.value as ItemStatus)}
+              >
+                {needsDecision(item) ? (
+                  <option value={DECISION_SELECT_VALUE} disabled>
+                    ♡ 아래 중에 골라주세요 ♡
+                  </option>
+                ) : null}
                 {STATUS_OPTIONS.map((status) => (
                   <option key={status} value={status}>
                     {getStatusSelectLabel(status)}
@@ -817,7 +826,6 @@ function DetailPage({
                 ))}
               </select>
             </label>
-            {needsDecision(item) ? <p className="status-decision-prompt">♡ 아래 중에 골라주세요 ♡</p> : null}
             <div className="quick-actions">
               <button className="soft-button" type="button" onClick={() => updateStatus("승인보류")}>
                 승인보류

@@ -733,18 +733,6 @@ a {
   max-width: 300px;
 }
 
-.status-decision-prompt {
-  width: fit-content;
-  margin: 0;
-  border: 1px dashed var(--pink);
-  border-radius: 999px;
-  padding: 8px 13px;
-  color: var(--rose);
-  background: rgba(246, 238, 241, 0.72);
-  font-size: 0.88rem;
-  font-weight: 900;
-}
-
 .quick-actions {
   display: flex;
   flex-wrap: wrap;
