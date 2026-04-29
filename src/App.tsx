@@ -88,12 +88,17 @@ const STATUS_DISPLAY_LABELS: Record<ItemStatus, string> = {
   "필요사유 확인": "필요사유 확인",
   "자리확인 필요": "자리확인",
   "입주조건 보완 필요": "입주조건 확인",
-  "현장방문 대기": "현장방문 스티커",
+  "현장방문 대기": "현장방문",
   승인보류: "승인보류",
   "입주승인 가능": "입주승인 가능",
   입주완료: "입주완료",
   "사후관리 대기": "사후관리 대기",
   심사종료: "심사종료",
+};
+
+const STATUS_SELECT_LABELS: Record<ItemStatus, string> = {
+  ...STATUS_DISPLAY_LABELS,
+  "현장방문 대기": "현장방문 스티커",
 };
 
 const DECISION_STATUSES: ItemStatus[] = ["승인보류", "입주승인 가능", "입주완료", "사후관리 대기", "심사종료"];
@@ -113,7 +118,7 @@ const TAB_DISPLAY_LABELS: Record<TabKey, string> = {
   필요사유: "필요사유",
   자리확인: "자리확인",
   입주조건: "입주조건",
-  현장방문: "현장방문 스티커",
+  현장방문: "현장방문",
   사후관리: "사후관리",
 };
 
@@ -127,7 +132,7 @@ const CONDITION_LABELS: Array<[keyof Omit<ConditionChecks, "categoryChecklist" |
 ];
 
 function getStatusSelectLabel(status: ItemStatus) {
-  return `♡ ${STATUS_DISPLAY_LABELS[status]} ♡`;
+  return `♡ ${STATUS_SELECT_LABELS[status]} ♡`;
 }
 
 function getStatusBadgeText(item: MulsimItem) {
@@ -144,16 +149,20 @@ function needsDecision(item: MulsimItem) {
 
 function areReviewStepsComplete(item: MulsimItem) {
   const hasBasicInfo = Boolean(item.name.trim());
-  const hasNeedReason = item.reasons.length > 0;
+  const hasNeedReason =
+    item.reasons.length > 0 || Boolean(item.desireReason.trim()) || Boolean(item.expectedEffect.trim());
   const hasSpaceCheck =
     Boolean(item.spaceCheck.location.trim()) ||
     item.spaceCheck.cleared ||
+    item.spaceCheck.needsRemoval ||
     item.spaceCheck.hasStorage ||
-    item.spaceCheck.easyAccess;
+    item.spaceCheck.easyAccess ||
+    item.spaceCheck.tooSmall ||
+    Boolean(item.spaceCheck.memo.trim());
   const hasConditionCheck =
-    CONDITION_LABELS.every(([key]) => Boolean(item.conditionChecks[key])) &&
-    item.conditionChecks.categoryChecklist.length > 0 &&
-    item.conditionChecks.categoryChecklist.every((check) => check.checked);
+    CONDITION_LABELS.some(([key]) => Boolean(item.conditionChecks[key])) ||
+    item.conditionChecks.categoryChecklist.some((check) => check.checked) ||
+    Boolean(item.conditionChecks.memo.trim());
   const hasVisitCheck = !hasPendingVisit(item);
 
   return hasBasicInfo && hasNeedReason && hasSpaceCheck && hasConditionCheck && hasVisitCheck;
@@ -435,7 +444,7 @@ function HomePage({
       <section className="summary-grid" aria-label="심사 요약">
         <SummaryCard label="심사대기" value={summary.waiting} icon={<ClipboardList size={21} />} />
         <SummaryCard label="자리확인" value={summary.space} icon={<Home size={21} />} />
-        <SummaryCard label="현장방문 스티커" value={summary.visit} icon={<Sparkles size={21} />} />
+        <SummaryCard label="현장방문" value={summary.visit} icon={<Sparkles size={21} />} />
         <SummaryCard label="사후관리 대기" value={summary.aftercare} icon={<CalendarDays size={21} />} />
       </section>
 
