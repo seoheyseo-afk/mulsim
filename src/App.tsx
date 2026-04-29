@@ -104,7 +104,7 @@ function needsVisitCheck(item: MulsimItem) {
 }
 
 function hasPendingVisit(item: MulsimItem) {
-  return needsVisitCheck(item) && (item.status === "현장방문 대기" || !item.visitDone);
+  return needsVisitCheck(item) && !item.visitDone;
 }
 
 const TABS: TabKey[] = ["기본정보", "필요사유", "자리확인", "입주조건", "현장방문", "사후관리"];
@@ -127,7 +127,7 @@ const CONDITION_LABELS: Array<[keyof Omit<ConditionChecks, "categoryChecklist" |
 ];
 
 function getStatusSelectLabel(status: ItemStatus) {
-  return STATUS_DISPLAY_LABELS[status];
+  return `♡ ${STATUS_DISPLAY_LABELS[status]} ♡`;
 }
 
 function getStatusBadgeText(item: MulsimItem) {
@@ -808,6 +808,7 @@ function DetailPage({
                 ))}
               </select>
             </label>
+            {needsDecision(item) ? <p className="status-decision-prompt">♡ 아래 중에 골라주세요 ♡</p> : null}
             <div className="quick-actions">
               <button className="soft-button" type="button" onClick={() => updateStatus("승인보류")}>
                 승인보류
