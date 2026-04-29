@@ -1,5 +1,5 @@
-import { normalizeCategory } from "./seed";
-import type { MulsimItem } from "./types";
+import { createConditionChecks, normalizeCategory } from "./seed";
+import type { ChecklistItem, ConditionChecks, MulsimItem } from "./types";
 
 const ITEMS_KEY = "mulsim.items.v1";
 const CUSTOM_CATEGORIES_KEY = "mulsim.customCategories.v1";
@@ -67,8 +67,37 @@ function isOnlyLegacySampleItems(items: MulsimItem[]) {
 function migrateItems(items: MulsimItem[]) {
   return items.map((item) => {
     const category = normalizeCategory(item.category);
-    return category === item.category ? item : { ...item, category };
+    return {
+      ...item,
+      category,
+      conditionChecks: migrateConditionChecks(item.conditionChecks, category),
+    };
   });
+}
+
+function migrateConditionChecks(checks: Partial<ConditionChecks> | undefined, category: string): ConditionChecks {
+  const defaults = createConditionChecks(category);
+  return {
+    ...defaults,
+    readyToUse: Boolean(checks?.readyToUse),
+    manageableAlone: Boolean(checks?.manageableAlone),
+    extrasChecked: Boolean(checks?.extrasChecked),
+    timeAvailable: Boolean(checks?.timeAvailable),
+    maintenanceReady: Boolean(checks?.maintenanceReady),
+    cleanupReady: Boolean(checks?.cleanupReady),
+    categoryChecklist: migrateCategoryChecklist(checks?.categoryChecklist ?? [], category),
+    memo: typeof checks?.memo === "string" ? checks.memo : "",
+  };
+}
+
+function migrateCategoryChecklist(checklist: ChecklistItem[], category: string) {
+  const currentDefaults = createConditionChecks(category).categoryChecklist;
+  const checkedByLabel = new Map(checklist.map((check) => [check.label, check.checked]));
+
+  return currentDefaults.map((check) => ({
+    ...check,
+    checked: checkedByLabel.get(check.label) ?? false,
+  }));
 }
 
 export function loadCustomCategories(): string[] {

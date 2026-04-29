@@ -71,7 +71,7 @@ const STATUS_OPTIONS: ItemStatus[] = [
 const STATUS_MESSAGES: Record<ItemStatus, string> = {
   상담접수: "상담접수표가 도착했어요. 천천히 살펴볼 차례예요.",
   서류검토: "기본 정보와 링크를 확인하고 있어요.",
-  "필요사유 확인": "아직 필요사유가 충분히 쌓이지 않았어요.",
+  "필요사유 확인": "필요한 이유가 하나씩 쌓이고 있어요.",
   "자리확인 필요": "아직 이 물건이 들어갈 자리가 정해지지 않았어요.",
   "입주조건 보완 필요": "입주 전에 확인할 조건이 조금 남아 있어요.",
   "현장방문 대기": "내 방에 잠깐 놓아볼 차례예요.",
@@ -95,15 +95,12 @@ function hasPendingVisit(item: MulsimItem) {
 const TABS: TabKey[] = ["기본정보", "필요사유", "자리확인", "입주조건", "현장방문", "사후관리"];
 
 const CONDITION_LABELS: Array<[keyof Omit<ConditionChecks, "categoryChecklist" | "memo">, string]> = [
-  ["installRequired", "설치 필요"],
-  ["assemblyRequired", "조립 필요"],
-  ["toolsRequired", "공구 필요"],
-  ["soloInstallPossible", "혼자 설치 가능"],
-  ["setupTimeRequired", "세팅 시간 필요"],
-  ["extraPartsRequired", "추가 부속품 필요"],
-  ["consumableCost", "소모품 비용 있음"],
-  ["maintenanceAnnoying", "유지관리 귀찮음"],
-  ["disposalHard", "버릴 때 번거로움"],
+  ["readyToUse", "바로 쓸 준비가 되었어요"],
+  ["manageableAlone", "혼자 감당할 수 있어요"],
+  ["extrasChecked", "같이 필요한 것도 확인했어요"],
+  ["timeAvailable", "사용할 시간을 낼 수 있어요"],
+  ["maintenanceReady", "쓰고 난 뒤 관리할 수 있어요"],
+  ["cleanupReady", "마지막 정리까지 부담 없어요"],
 ];
 
 const STICKER_PRESETS: Array<{
@@ -1157,14 +1154,16 @@ function SpaceCheckTab({ item, onChange }: { item: MulsimItem; onChange: (item: 
             placeholder="예: 침대 발쪽 긴 콘솔 위"
           />
         </label>
-        <CheckRow label="자리를 이미 비웠는지" checked={item.spaceCheck.cleared} onChange={(checked) => updateSpace("cleared", checked)} />
-        <CheckRow label="기존 물건을 치워야 하는지" checked={item.spaceCheck.needsRemoval} onChange={(checked) => updateSpace("needsRemoval", checked)} />
-        <CheckRow label="사용하지 않을 때 보관할 곳이 있는지" checked={item.spaceCheck.hasStorage} onChange={(checked) => updateSpace("hasStorage", checked)} />
-        <CheckRow label="꺼내기 쉬운 위치인지" checked={item.spaceCheck.easyAccess} onChange={(checked) => updateSpace("easyAccess", checked)} />
-        <CheckRow label="공간이 부족한지" checked={item.spaceCheck.tooSmall} onChange={(checked) => updateSpace("tooSmall", checked)} />
+        <CheckRow label="자리를 이미 비웠어요" checked={item.spaceCheck.cleared} onChange={(checked) => updateSpace("cleared", checked)} />
+        <CheckRow label="사용하지 않을 때 보관할 곳이 있어요" checked={item.spaceCheck.hasStorage} onChange={(checked) => updateSpace("hasStorage", checked)} />
+        <CheckRow label="꺼내기 쉬운 위치예요" checked={item.spaceCheck.easyAccess} onChange={(checked) => updateSpace("easyAccess", checked)} />
         <label className="span-2">
           메모
-          <textarea value={item.spaceCheck.memo} onChange={(event) => updateSpace("memo", event.target.value)} />
+          <textarea
+            value={item.spaceCheck.memo}
+            onChange={(event) => updateSpace("memo", event.target.value)}
+            placeholder="예: 기존 물건을 치워야 해요. 공간이 부족해요."
+          />
         </label>
       </div>
     </section>
@@ -1209,6 +1208,7 @@ function ConditionsTab({ item, onChange }: { item: MulsimItem; onChange: (item: 
           <textarea
             value={item.conditionChecks.memo}
             onChange={(event) => updateCondition("memo", event.target.value)}
+            placeholder="설치할 날짜, 같이 필요한 물건, 관리 걱정 등을 적어둘 수 있어요."
           />
         </label>
       </section>
@@ -1216,23 +1216,16 @@ function ConditionsTab({ item, onChange }: { item: MulsimItem; onChange: (item: 
       <section className="panel">
         <div className="panel-heading">
           <ClipboardCheck size={19} />
-          <h2>{item.category} 체크리스트</h2>
+          <div>
+            <span className="eyebrow">{item.category}</span>
+            <h2>카테고리별 체크리스트</h2>
+          </div>
         </div>
         <div className="check-grid single">
           {item.conditionChecks.categoryChecklist.map((check) => (
             <CheckRow key={check.id} label={check.label} checked={check.checked} onChange={(checked) => updateCategoryCheck(check.id, checked)} />
           ))}
         </div>
-        <button
-          className="ghost-button"
-          type="button"
-          onClick={() =>
-            updateCondition("categoryChecklist", createConditionChecks(item.category).categoryChecklist)
-          }
-        >
-          <RotateCcw size={16} />
-          기본 체크리스트 다시 불러오기
-        </button>
       </section>
     </div>
   );

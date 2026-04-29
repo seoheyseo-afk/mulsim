@@ -67,15 +67,12 @@ export interface ChecklistItem {
 }
 
 export interface ConditionChecks {
-  installRequired: boolean;
-  assemblyRequired: boolean;
-  toolsRequired: boolean;
-  soloInstallPossible: boolean;
-  setupTimeRequired: boolean;
-  extraPartsRequired: boolean;
-  consumableCost: boolean;
-  maintenanceAnnoying: boolean;
-  disposalHard: boolean;
+  readyToUse: boolean;
+  manageableAlone: boolean;
+  extrasChecked: boolean;
+  timeAvailable: boolean;
+  maintenanceReady: boolean;
+  cleanupReady: boolean;
   categoryChecklist: ChecklistItem[];
   memo: string;
 }
