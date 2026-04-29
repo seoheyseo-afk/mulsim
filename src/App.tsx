@@ -1755,7 +1755,7 @@ function AftercareTab({ item, onChange }: { item: MulsimItem; onChange: (item: M
             날짜
             <input type="date" value={draft.date} onChange={(event) => updateDraft("date", event.target.value)} />
           </label>
-          <label className="span-2">
+          <label className="aftercare-usage">
             실제로 몇 번 사용했는지
             <input
               type="range"
@@ -1767,16 +1767,20 @@ function AftercareTab({ item, onChange }: { item: MulsimItem; onChange: (item: M
             />
             <span className="range-value">{formatUsageCount(draft.usageCount)}</span>
           </label>
+          <label className="aftercare-regret">
+            후회한다면 이유
+            <textarea
+              value={draft.regretReason}
+              onChange={(event) => updateDraft("regretReason", event.target.value)}
+              placeholder="예: 생각보다 소재감이 아쉬워요. 가격에 비해 활약이 적어요. 관리가 번거로워요. 은근히 공간을 많이 차지해요."
+            />
+          </label>
           <div className="aftercare-check-stack">
             <CheckRow label="잘 쓰고 있는지" checked={draft.usingWell} onChange={(checked) => updateDraft("usingWell", checked)} />
             <CheckRow label="둘 곳은 괜찮은지" checked={draft.placeOk} onChange={(checked) => updateDraft("placeOk", checked)} />
             <CheckRow label="설치는 예상보다 쉬웠는지" checked={draft.installEasy} onChange={(checked) => updateDraft("installEasy", checked)} />
             <CheckRow label="다시 돌아가도 살 건지" checked={draft.wouldBuyAgain} onChange={(checked) => updateDraft("wouldBuyAgain", checked)} />
           </div>
-          <label className="aftercare-regret">
-            후회한다면 이유
-            <textarea value={draft.regretReason} onChange={(event) => updateDraft("regretReason", event.target.value)} />
-          </label>
           <label className="span-2">
             메모
             <textarea value={draft.memo} onChange={(event) => updateDraft("memo", event.target.value)} />

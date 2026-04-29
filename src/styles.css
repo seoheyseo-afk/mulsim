@@ -828,19 +828,21 @@ a {
   margin-top: 16px;
 }
 
+.aftercare-usage {
+  align-self: start;
+}
+
 .aftercare-check-stack {
   display: grid;
   gap: 10px;
 }
 
 .aftercare-regret {
-  grid-template-rows: auto 1fr;
-  align-self: stretch;
+  align-self: start;
 }
 
 .aftercare-regret textarea {
-  height: 100%;
-  min-height: 222px;
+  min-height: 132px;
 }
 
 .range-value {
