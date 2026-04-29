@@ -103,6 +103,9 @@ const CONDITION_LABELS: Array<[keyof Omit<ConditionChecks, "categoryChecklist" |
   ["cleanupReady", "마지막 정리까지 부담 없어요"],
 ];
 
+const AFTERCARE_PERIOD_OPTIONS: AftercareRecord["period"][] = ["하루", "한주", "한달", "세달", "일년"];
+const DAILY_USAGE_VALUE = 366;
+
 const STICKER_PRESETS: Array<{
   stickerType: StickerType;
   name: string;
@@ -1697,11 +1700,10 @@ function SimpleStickerArt({ stickerType, name }: { stickerType?: StickerType; na
 
 function AftercareTab({ item, onChange }: { item: MulsimItem; onChange: (item: MulsimItem) => void }) {
   const [draft, setDraft] = useState<Omit<AftercareRecord, "id">>({
-    period: "7일",
+    period: "하루",
     date: today(),
     usageCount: 0,
     usingWell: true,
-    neglected: false,
     placeOk: true,
     installEasy: true,
     wouldBuyAgain: true,
@@ -1721,11 +1723,10 @@ function AftercareTab({ item, onChange }: { item: MulsimItem; onChange: (item: M
       aftercare: [{ id: makeId("aftercare"), ...draft }, ...item.aftercare],
     });
     setDraft({
-      period: "7일",
+      period: "하루",
       date: today(),
       usageCount: 0,
       usingWell: true,
-      neglected: false,
       placeOk: true,
       installEasy: true,
       wouldBuyAgain: true,
@@ -1745,9 +1746,9 @@ function AftercareTab({ item, onChange }: { item: MulsimItem; onChange: (item: M
           <label>
             회고 시점
             <select value={draft.period} onChange={(event) => updateDraft("period", event.target.value as AftercareRecord["period"])}>
-              <option>7일</option>
-              <option>30일</option>
-              <option>90일</option>
+              {AFTERCARE_PERIOD_OPTIONS.map((period) => (
+                <option key={period}>{period}</option>
+              ))}
             </select>
           </label>
           <label>
@@ -1757,14 +1758,16 @@ function AftercareTab({ item, onChange }: { item: MulsimItem; onChange: (item: M
           <label>
             실제로 몇 번 사용했는지
             <input
-              type="number"
+              type="range"
               min="0"
+              max={DAILY_USAGE_VALUE}
+              step="1"
               value={draft.usageCount}
               onChange={(event) => updateDraft("usageCount", Number(event.target.value))}
             />
+            <span className="range-value">{formatUsageCount(draft.usageCount)}</span>
           </label>
           <CheckRow label="잘 쓰고 있는지" checked={draft.usingWell} onChange={(checked) => updateDraft("usingWell", checked)} />
-          <CheckRow label="방치 중인지" checked={draft.neglected} onChange={(checked) => updateDraft("neglected", checked)} />
           <CheckRow label="둘 곳은 괜찮은지" checked={draft.placeOk} onChange={(checked) => updateDraft("placeOk", checked)} />
           <CheckRow label="설치는 예상보다 쉬웠는지" checked={draft.installEasy} onChange={(checked) => updateDraft("installEasy", checked)} />
           <CheckRow label="다시 돌아가도 살 건지" checked={draft.wouldBuyAgain} onChange={(checked) => updateDraft("wouldBuyAgain", checked)} />
@@ -1795,17 +1798,17 @@ function AftercareTab({ item, onChange }: { item: MulsimItem; onChange: (item: M
           {item.aftercare.map((record) => (
             <article className="record-card" key={record.id}>
               <div className="record-topline">
-                <strong>{record.period} 회고</strong>
+                <strong>{formatAftercarePeriod(record.period)} 회고</strong>
                 <span>{record.date}</span>
               </div>
               <dl className="record-meta">
                 <div>
                   <dt>사용</dt>
-                  <dd>{record.usageCount}회</dd>
+                  <dd>{formatUsageCount(record.usageCount)}</dd>
                 </div>
                 <div>
                   <dt>상태</dt>
-                  <dd>{record.usingWell ? "사용 중" : "애매함"}</dd>
+                  <dd>{getAftercareUsageStatus(record)}</dd>
                 </div>
                 <div>
                   <dt>재구매</dt>
@@ -1820,6 +1823,66 @@ function AftercareTab({ item, onChange }: { item: MulsimItem; onChange: (item: M
       </section>
     </div>
   );
+}
+
+function formatAftercarePeriod(period: string) {
+  const labels: Record<string, string> = {
+    "1일": "하루",
+    "7일": "한주",
+    "1주": "한주",
+    "30일": "한달",
+    "1달": "한달",
+    "90일": "세달",
+    "3달": "세달",
+    "365일": "일년",
+    "1년": "일년",
+  };
+  return labels[period] ?? period;
+}
+
+function getAftercarePeriodDays(period: string) {
+  const days: Record<string, number> = {
+    하루: 1,
+    한주: 7,
+    한달: 30,
+    세달: 90,
+    일년: 365,
+    "1일": 1,
+    "7일": 7,
+    "1주": 7,
+    "30일": 30,
+    "1달": 30,
+    "90일": 90,
+    "3달": 90,
+    "365일": 365,
+    "1년": 365,
+  };
+  return days[period] ?? 30;
+}
+
+function formatUsageCount(usageCount: number) {
+  if (usageCount > 365) {
+    return "매일";
+  }
+  return `${Math.max(0, Math.round(usageCount))}회`;
+}
+
+function getAftercareUsageStatus(record: AftercareRecord) {
+  const usageCount = Math.max(0, Math.round(record.usageCount));
+  if (usageCount === 0) {
+    return "사용전";
+  }
+  if (usageCount > 365) {
+    return "매일 함께하는 중";
+  }
+
+  const periodDays = getAftercarePeriodDays(record.period);
+  const lowUsageThreshold = Math.max(1, Math.floor(periodDays * 0.1));
+  if (periodDays >= 7 && usageCount <= lowUsageThreshold) {
+    return "살짝 방치 신호가 보여요";
+  }
+
+  return record.usingWell ? "잘 쓰는 중" : "아직 애매함";
 }
 
 function CheckRow({

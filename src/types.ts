@@ -95,11 +95,10 @@ export interface RoomPlacement {
 
 export interface AftercareRecord {
   id: string;
-  period: "7일" | "30일" | "90일";
+  period: "하루" | "한주" | "한달" | "세달" | "일년";
   date: string;
   usageCount: number;
   usingWell: boolean;
-  neglected: boolean;
   placeOk: boolean;
   installEasy: boolean;
   wouldBuyAgain: boolean;

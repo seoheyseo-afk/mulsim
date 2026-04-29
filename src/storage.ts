@@ -1,5 +1,5 @@
 import { createConditionChecks, normalizeCategory } from "./seed";
-import type { ChecklistItem, ConditionChecks, MulsimItem } from "./types";
+import type { AftercareRecord, ChecklistItem, ConditionChecks, MulsimItem } from "./types";
 
 const ITEMS_KEY = "mulsim.items.v1";
 const CUSTOM_CATEGORIES_KEY = "mulsim.customCategories.v1";
@@ -71,6 +71,7 @@ function migrateItems(items: MulsimItem[]) {
       ...item,
       category,
       conditionChecks: migrateConditionChecks(item.conditionChecks, category),
+      aftercare: migrateAftercareRecords(item.aftercare),
     };
   });
 }
@@ -98,6 +99,45 @@ function migrateCategoryChecklist(checklist: ChecklistItem[], category: string) 
     ...check,
     checked: checkedByLabel.get(check.label) ?? false,
   }));
+}
+
+function migrateAftercareRecords(records: MulsimItem["aftercare"] | undefined): AftercareRecord[] {
+  if (!Array.isArray(records)) {
+    return [];
+  }
+
+  return records.map((record) => ({
+    id: record.id,
+    period: normalizeAftercarePeriod(String(record.period)),
+    date: record.date,
+    usageCount: Number.isFinite(record.usageCount) ? Math.max(0, record.usageCount) : 0,
+    usingWell: Boolean(record.usingWell),
+    placeOk: Boolean(record.placeOk),
+    installEasy: Boolean(record.installEasy),
+    wouldBuyAgain: Boolean(record.wouldBuyAgain),
+    regretReason: typeof record.regretReason === "string" ? record.regretReason : "",
+    memo: typeof record.memo === "string" ? record.memo : "",
+  }));
+}
+
+function normalizeAftercarePeriod(period: string): AftercareRecord["period"] {
+  const periodMap: Record<string, AftercareRecord["period"]> = {
+    하루: "하루",
+    한주: "한주",
+    한달: "한달",
+    세달: "세달",
+    일년: "일년",
+    "1일": "하루",
+    "7일": "한주",
+    "1주": "한주",
+    "30일": "한달",
+    "1달": "한달",
+    "90일": "세달",
+    "3달": "세달",
+    "365일": "일년",
+    "1년": "일년",
+  };
+  return periodMap[period] ?? "한달";
 }
 
 export function loadCustomCategories(): string[] {
