@@ -27,7 +27,6 @@ import {
   CATEGORIES,
   createConditionChecks,
   createItemFromDraft,
-  createSampleItems,
   defaultRoomPlacements,
   makeId,
   today,
@@ -134,7 +133,7 @@ const initialDraft: IntakeDraft = {
 };
 
 function App() {
-  const [items, setItems] = useState<MulsimItem[]>(() => loadItems() ?? createSampleItems());
+  const [items, setItems] = useState<MulsimItem[]>(() => loadItems() ?? []);
   const [customCategories, setCustomCategories] = useState<string[]>(() => loadCustomCategories());
   const [imageSources, setImageSources] = useState<ImageSources>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -324,6 +323,7 @@ function HomePage({
   onOpenIntake: () => void;
   onSelect: (id: string) => void;
 }) {
+  const hasItems = items.length > 0;
   const summary = useMemo(
     () => ({
       waiting: items.filter((item) => !["입주완료", "심사종료"].includes(item.status)).length,
@@ -340,7 +340,7 @@ function HomePage({
         <div className="hero-copy">
           <span className="hero-logo">들일까</span>
           <span className="hero-badge">물건입주심사</span>
-          <h1>오늘도 내 방에 들어오고 싶은 물건들이 기다리고 있어요.</h1>
+          <h1>{hasItems ? "오늘도 내 방에 들어오고 싶은 물건들이 기다리고 있어요." : "아직 접수된 물건이 없어요."}</h1>
           <div className="hero-actions">
             <button className="primary-button large" type="button" onClick={onOpenIntake}>
               <ClipboardList size={20} />
@@ -370,16 +370,30 @@ function HomePage({
           </button>
         </div>
 
-        <div className="item-grid">
-          {items.map((item) => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              imageSrc={resolveItemImage(item, imageSources)}
-              onSelect={() => onSelect(item.id)}
-            />
-          ))}
-        </div>
+        {hasItems ? (
+          <div className="item-grid">
+            {items.map((item) => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                imageSrc={resolveItemImage(item, imageSources)}
+                onSelect={() => onSelect(item.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="empty-list">
+            <PackageCheck size={36} />
+            <div>
+              <h3>아직 접수된 물건이 없어요.</h3>
+              <p>필요한 물건이 생기면 상담접수로 심사를 시작하세요.</p>
+            </div>
+            <button className="primary-button" type="button" onClick={onOpenIntake}>
+              <Plus size={17} />
+              상담접수
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );

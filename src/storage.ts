@@ -5,6 +5,11 @@ const CUSTOM_CATEGORIES_KEY = "mulsim.customCategories.v1";
 const DB_NAME = "mulsim-indexed-images";
 const DB_VERSION = 1;
 const STORE_NAME = "uploads";
+const LEGACY_SAMPLE_ITEM_SIGNATURES = [
+  { name: "무소음 미니 가습기", price: "39000", category: "전자기기", firstWantedDate: "2026-04-18" },
+  { name: "아치형 수납 트레이", price: "18000", category: "수납용품", firstWantedDate: "2026-04-21" },
+  { name: "딥로즈 쿠션 커버", price: "12000", category: "생활소품", firstWantedDate: "2026-04-24" },
+];
 
 interface StoredImage {
   id: string;
@@ -22,7 +27,11 @@ export function loadItems(): MulsimItem[] | null {
   }
 
   try {
-    return JSON.parse(raw) as MulsimItem[];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return null;
+    }
+    return isOnlyLegacySampleItems(parsed) ? [] : (parsed as MulsimItem[]);
   } catch {
     return null;
   }
@@ -30,6 +39,25 @@ export function loadItems(): MulsimItem[] | null {
 
 export function saveItems(items: MulsimItem[]) {
   localStorage.setItem(ITEMS_KEY, JSON.stringify(items));
+}
+
+function isOnlyLegacySampleItems(items: MulsimItem[]) {
+  return (
+    items.length > 0 &&
+    items.length <= LEGACY_SAMPLE_ITEM_SIGNATURES.length &&
+    items.every((item) =>
+      LEGACY_SAMPLE_ITEM_SIGNATURES.some(
+        (sample) =>
+          item.name === sample.name &&
+          item.price === sample.price &&
+          item.category === sample.category &&
+          item.firstWantedDate === sample.firstWantedDate &&
+          item.link === "" &&
+          item.imageUrl === "" &&
+          !item.imageId,
+      ),
+    )
+  );
 }
 
 export function loadCustomCategories(): string[] {

@@ -395,6 +395,31 @@ a {
   gap: 18px;
 }
 
+.empty-list {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  border: 1px dashed var(--line);
+  border-radius: 24px;
+  padding: 22px;
+  color: var(--rose);
+  background: rgba(255, 249, 250, 0.7);
+}
+
+.empty-list h3 {
+  margin: 0 0 4px;
+  color: var(--text);
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.empty-list p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
 .item-card {
   overflow: hidden;
   display: grid;
@@ -1170,6 +1195,11 @@ a {
   .form-grid,
   .check-grid {
     grid-template-columns: 1fr;
+  }
+
+  .empty-list {
+    grid-template-columns: 1fr;
+    justify-items: start;
   }
 
   .span-2 {
