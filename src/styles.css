@@ -662,9 +662,12 @@ a {
 
 .aftercare-form input[type="date"] {
   min-width: 0;
+  width: 100%;
   max-width: 100%;
   inline-size: 100%;
   max-inline-size: 100%;
+  box-sizing: border-box;
+  display: block;
 }
 
 .aftercare-date-field {
@@ -1318,12 +1321,6 @@ a {
     width: 100%;
     -webkit-appearance: none;
     appearance: none;
-  }
-
-  .aftercare-date-field {
-    width: calc(100% - 10px);
-    max-width: calc(100% - 10px);
-    justify-self: start;
   }
 
   .room-shell {
