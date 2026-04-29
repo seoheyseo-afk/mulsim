@@ -81,6 +81,16 @@ const STATUS_MESSAGES: Record<ItemStatus, string> = {
   심사종료: "관심이 사라져 심사를 마무리했어요.",
 };
 
+const VISIT_NO_LONGER_REQUIRED_STATUSES: ItemStatus[] = ["입주완료", "사후관리 대기", "심사종료"];
+
+function needsVisitCheck(item: MulsimItem) {
+  return !VISIT_NO_LONGER_REQUIRED_STATUSES.includes(item.status);
+}
+
+function hasPendingVisit(item: MulsimItem) {
+  return needsVisitCheck(item) && (item.status === "현장방문 대기" || !item.visitDone);
+}
+
 const TABS: TabKey[] = ["기본정보", "필요사유", "자리확인", "입주조건", "현장방문", "사후관리"];
 
 const CONDITION_LABELS: Array<[keyof Omit<ConditionChecks, "categoryChecklist" | "memo">, string]> = [
@@ -328,7 +338,7 @@ function HomePage({
     () => ({
       waiting: items.filter((item) => !["입주완료", "심사종료"].includes(item.status)).length,
       space: items.filter((item) => item.status === "자리확인 필요" || !item.spaceCheck.location).length,
-      visit: items.filter((item) => item.status === "현장방문 대기" || !item.visitDone).length,
+      visit: items.filter(hasPendingVisit).length,
       aftercare: items.filter((item) => item.status === "사후관리 대기").length,
     }),
     [items],
@@ -427,6 +437,7 @@ function ItemCard({
   onSelect: () => void;
 }) {
   const preview = normalizeImagePreview(item.imagePreview);
+  const showVisitState = needsVisitCheck(item);
 
   return (
     <article className="item-card">
@@ -456,8 +467,10 @@ function ItemCard({
           <span>필요사유 {item.reasons.length}건</span>
         </div>
         <p>{STATUS_MESSAGES[item.status]}</p>
-        <div className="card-footer">
-          <span className={item.visitDone ? "mini-badge good" : "mini-badge"}>{item.visitDone ? "현장방문 완료" : "현장방문 전"}</span>
+        <div className={showVisitState ? "card-footer" : "card-footer end-only"}>
+          {showVisitState ? (
+            <span className={item.visitDone ? "mini-badge good" : "mini-badge"}>{item.visitDone ? "현장방문 완료" : "현장방문 전"}</span>
+          ) : null}
           <button className="text-button" type="button" onClick={onSelect}>
             심사 보기
           </button>
@@ -676,6 +689,7 @@ function DetailPage({
   onWithdraw: () => void;
 }) {
   const imageSrc = resolveItemImage(item, imageSources);
+  const showVisitState = needsVisitCheck(item);
 
   const updateStatus = (status: ItemStatus) => onChange({ ...item, status });
 
@@ -710,7 +724,7 @@ function DetailPage({
             <span>{formatPrice(item.price)}</span>
             <span>심사 {daysSince(item.createdAt)}일째</span>
             <span>필요사유 {item.reasons.length}건</span>
-            <span>{item.visitDone ? "현장방문 완료" : "현장방문 전"}</span>
+            {showVisitState ? <span>{item.visitDone ? "현장방문 완료" : "현장방문 전"}</span> : null}
           </div>
           <div className="status-controls">
             <label>

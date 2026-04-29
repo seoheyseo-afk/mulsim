@@ -613,6 +613,10 @@ a {
   gap: 12px;
 }
 
+.card-footer.end-only {
+  justify-content: flex-end;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
