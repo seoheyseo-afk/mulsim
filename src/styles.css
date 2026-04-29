@@ -646,6 +646,10 @@ a {
   gap: 14px;
 }
 
+.aftercare-form {
+  row-gap: 10px;
+}
+
 .span-2 {
   grid-column: span 2;
 }
@@ -834,15 +838,18 @@ a {
 
 .aftercare-check-stack {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .aftercare-regret {
-  align-self: start;
+  grid-row: span 2;
+  grid-template-rows: auto 1fr;
+  align-self: stretch;
 }
 
 .aftercare-regret textarea {
-  min-height: 132px;
+  height: 100%;
+  min-height: 262px;
 }
 
 .range-value {
@@ -1270,6 +1277,14 @@ a {
 
   .category-add-row {
     grid-template-columns: 1fr;
+  }
+
+  .aftercare-regret {
+    grid-row: auto;
+  }
+
+  .aftercare-regret textarea {
+    min-height: 132px;
   }
 
   .room-shell {
