@@ -1742,7 +1742,7 @@ function AftercareTab({ item, onChange }: { item: MulsimItem; onChange: (item: M
           <CalendarDays size={19} />
           <h2>사후관리 기록</h2>
         </div>
-        <form className="form-grid compact" onSubmit={addRecord}>
+        <form className="form-grid compact aftercare-form" onSubmit={addRecord}>
           <label>
             회고 시점
             <select value={draft.period} onChange={(event) => updateDraft("period", event.target.value as AftercareRecord["period"])}>
@@ -1755,7 +1755,7 @@ function AftercareTab({ item, onChange }: { item: MulsimItem; onChange: (item: M
             날짜
             <input type="date" value={draft.date} onChange={(event) => updateDraft("date", event.target.value)} />
           </label>
-          <label>
+          <label className="span-2">
             실제로 몇 번 사용했는지
             <input
               type="range"
@@ -1767,15 +1767,17 @@ function AftercareTab({ item, onChange }: { item: MulsimItem; onChange: (item: M
             />
             <span className="range-value">{formatUsageCount(draft.usageCount)}</span>
           </label>
-          <CheckRow label="잘 쓰고 있는지" checked={draft.usingWell} onChange={(checked) => updateDraft("usingWell", checked)} />
-          <CheckRow label="둘 곳은 괜찮은지" checked={draft.placeOk} onChange={(checked) => updateDraft("placeOk", checked)} />
-          <CheckRow label="설치는 예상보다 쉬웠는지" checked={draft.installEasy} onChange={(checked) => updateDraft("installEasy", checked)} />
-          <CheckRow label="다시 돌아가도 살 건지" checked={draft.wouldBuyAgain} onChange={(checked) => updateDraft("wouldBuyAgain", checked)} />
-          <label>
+          <div className="aftercare-check-stack">
+            <CheckRow label="잘 쓰고 있는지" checked={draft.usingWell} onChange={(checked) => updateDraft("usingWell", checked)} />
+            <CheckRow label="둘 곳은 괜찮은지" checked={draft.placeOk} onChange={(checked) => updateDraft("placeOk", checked)} />
+            <CheckRow label="설치는 예상보다 쉬웠는지" checked={draft.installEasy} onChange={(checked) => updateDraft("installEasy", checked)} />
+            <CheckRow label="다시 돌아가도 살 건지" checked={draft.wouldBuyAgain} onChange={(checked) => updateDraft("wouldBuyAgain", checked)} />
+          </div>
+          <label className="aftercare-regret">
             후회한다면 이유
             <textarea value={draft.regretReason} onChange={(event) => updateDraft("regretReason", event.target.value)} />
           </label>
-          <label>
+          <label className="span-2">
             메모
             <textarea value={draft.memo} onChange={(event) => updateDraft("memo", event.target.value)} />
           </label>

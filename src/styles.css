@@ -760,6 +760,7 @@ a {
 .two-column {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  align-items: start;
   gap: 18px;
 }
 
@@ -825,6 +826,21 @@ a {
 
 .full-label {
   margin-top: 16px;
+}
+
+.aftercare-check-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.aftercare-regret {
+  grid-template-rows: auto 1fr;
+  align-self: stretch;
+}
+
+.aftercare-regret textarea {
+  height: 100%;
+  min-height: 222px;
 }
 
 .range-value {
