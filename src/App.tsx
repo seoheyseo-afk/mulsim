@@ -1772,7 +1772,7 @@ function AftercareTab({ item, onChange }: { item: MulsimItem; onChange: (item: M
             <textarea
               value={draft.regretReason}
               onChange={(event) => updateDraft("regretReason", event.target.value)}
-              placeholder="예: 예쁘긴 한데 먼지가 자주 앉아요. 생각보다 소재감이 살짝 아쉬워요. 가격에 비해 활약이 조용해요. 은근히 자리를 차지해서 방이 조금 답답해졌어요."
+              placeholder="예: 상세컷에 속았다... 가성비 야호... 마감이 왜 이래요... 귀여운데 손 많이 감... 자리값 못하는 중... 존재감 과다... 생각보다 안 친해짐... 쓰려면 각오 필요... 세팅부터 기력 소진... 관리 난이도 무슨 일... 후기 믿을 걸... 가격표가 제일 성실함"
             />
           </label>
           <div className="aftercare-check-stack">
