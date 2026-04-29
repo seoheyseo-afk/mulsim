@@ -1735,6 +1735,15 @@ function AftercareTab({ item, onChange }: { item: MulsimItem; onChange: (item: M
     });
   };
 
+  const removeRecord = (id: string) => {
+    const aftercare = item.aftercare.filter((record) => record.id !== id);
+    onChange({
+      ...item,
+      status: aftercare.length === 0 && item.status === "사후관리 대기" ? "입주완료" : item.status,
+      aftercare,
+    });
+  };
+
   return (
     <div className="two-column">
       <section className="panel">
@@ -1805,7 +1814,12 @@ function AftercareTab({ item, onChange }: { item: MulsimItem; onChange: (item: M
             <article className="record-card" key={record.id}>
               <div className="record-topline">
                 <strong>{formatAftercarePeriod(record.period)} 회고</strong>
-                <span>{record.date}</span>
+                <div className="record-actions">
+                  <span>{record.date}</span>
+                  <button className="icon-button small" type="button" aria-label="회고 삭제" onClick={() => removeRecord(record.id)}>
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </div>
               <dl className="record-meta">
                 <div>
