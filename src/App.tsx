@@ -82,6 +82,21 @@ const STATUS_MESSAGES: Record<ItemStatus, string> = {
   심사종료: "관심이 사라져 심사를 마무리했어요.",
 };
 
+const STATUS_DISPLAY_LABELS: Record<ItemStatus, string> = {
+  상담접수: "상담접수",
+  서류검토: "서류검토",
+  "필요사유 확인": "필요사유 확인",
+  "자리확인 필요": "자리확인",
+  "입주조건 보완 필요": "입주조건 확인",
+  "현장방문 대기": "현장방문",
+  승인보류: "승인보류",
+  "입주승인 가능": "입주승인 가능",
+  입주완료: "입주완료",
+  "사후관리 대기": "사후관리 대기",
+  심사종료: "심사종료",
+};
+
+const DECISION_STATUSES: ItemStatus[] = ["승인보류", "입주승인 가능", "입주완료", "사후관리 대기", "심사종료"];
 const VISIT_NO_LONGER_REQUIRED_STATUSES: ItemStatus[] = ["입주완료", "사후관리 대기", "심사종료"];
 
 function needsVisitCheck(item: MulsimItem) {
@@ -102,6 +117,39 @@ const CONDITION_LABELS: Array<[keyof Omit<ConditionChecks, "categoryChecklist" |
   ["maintenanceReady", "쓰고 난 뒤 관리할 수 있어요"],
   ["cleanupReady", "마지막 정리까지 부담 없어요"],
 ];
+
+function getStatusSelectLabel(status: ItemStatus) {
+  return STATUS_DISPLAY_LABELS[status];
+}
+
+function getStatusBadgeLabel(item: MulsimItem) {
+  return `♡ ${needsDecision(item) ? "아래 결정을 내려주세요" : STATUS_DISPLAY_LABELS[item.status]} ♡`;
+}
+
+function getStatusMessage(item: MulsimItem) {
+  return needsDecision(item) ? "확인이 끝났어요. 심사 보기에서 다음 결정을 골라주세요." : STATUS_MESSAGES[item.status];
+}
+
+function needsDecision(item: MulsimItem) {
+  return !DECISION_STATUSES.includes(item.status) && areReviewStepsComplete(item);
+}
+
+function areReviewStepsComplete(item: MulsimItem) {
+  const hasBasicInfo = Boolean(item.name.trim());
+  const hasNeedReason = item.reasons.length > 0;
+  const hasSpaceCheck =
+    Boolean(item.spaceCheck.location.trim()) ||
+    item.spaceCheck.cleared ||
+    item.spaceCheck.hasStorage ||
+    item.spaceCheck.easyAccess;
+  const hasConditionCheck =
+    CONDITION_LABELS.every(([key]) => Boolean(item.conditionChecks[key])) &&
+    item.conditionChecks.categoryChecklist.length > 0 &&
+    item.conditionChecks.categoryChecklist.every((check) => check.checked);
+  const hasVisitCheck = !hasPendingVisit(item);
+
+  return hasBasicInfo && hasNeedReason && hasSpaceCheck && hasConditionCheck && hasVisitCheck;
+}
 
 const AFTERCARE_PERIOD_OPTIONS: AftercareRecord["period"][] = ["하루", "한주", "한달", "세달", "일년"];
 const DAILY_USAGE_VALUE = 366;
@@ -364,8 +412,8 @@ function HomePage({
 
       <section className="summary-grid" aria-label="심사 요약">
         <SummaryCard label="심사대기" value={summary.waiting} icon={<ClipboardList size={21} />} />
-        <SummaryCard label="자리확인 필요" value={summary.space} icon={<Home size={21} />} />
-        <SummaryCard label="현장방문 대기" value={summary.visit} icon={<Sparkles size={21} />} />
+        <SummaryCard label="자리확인" value={summary.space} icon={<Home size={21} />} />
+        <SummaryCard label="현장방문" value={summary.visit} icon={<Sparkles size={21} />} />
         <SummaryCard label="사후관리 대기" value={summary.aftercare} icon={<CalendarDays size={21} />} />
       </section>
 
@@ -460,14 +508,14 @@ function ItemCard({
       <div className="item-card-body">
         <div className="card-title-row">
           <h3>{item.name}</h3>
-          <span className="status-badge">{item.status}</span>
+          <span className="status-badge">{getStatusBadgeLabel(item)}</span>
         </div>
         <div className="item-meta">
           <span>{formatPrice(item.price)}</span>
           <span>심사 {daysSince(item.createdAt)}일째</span>
           <span>필요사유 {item.reasons.length}건</span>
         </div>
-        <p>{STATUS_MESSAGES[item.status]}</p>
+        <p>{getStatusMessage(item)}</p>
         <div className={showVisitState ? "card-footer" : "card-footer end-only"}>
           {showVisitState ? (
             <span className={item.visitDone ? "mini-badge good" : "mini-badge"}>{item.visitDone ? "현장방문 완료" : "현장방문 전"}</span>
@@ -718,9 +766,9 @@ function DetailPage({
               <span className="eyebrow">{item.category}</span>
               <h1>{item.name}</h1>
             </div>
-            <span className="status-badge large">{item.status}</span>
+            <span className="status-badge large">{getStatusBadgeLabel(item)}</span>
           </div>
-          <p>{STATUS_MESSAGES[item.status]}</p>
+          <p>{getStatusMessage(item)}</p>
           <div className="detail-stats">
             <span>{formatPrice(item.price)}</span>
             <span>심사 {daysSince(item.createdAt)}일째</span>
@@ -732,7 +780,9 @@ function DetailPage({
               상태 변경
               <select value={item.status} onChange={(event) => updateStatus(event.target.value as ItemStatus)}>
                 {STATUS_OPTIONS.map((status) => (
-                  <option key={status}>{status}</option>
+                  <option key={status} value={status}>
+                    {getStatusSelectLabel(status)}
+                  </option>
                 ))}
               </select>
             </label>
