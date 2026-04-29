@@ -560,12 +560,18 @@ a {
 }
 
 .status-badge {
+  justify-content: center;
+  gap: 5px;
   padding: 6px 10px;
 }
 
 .status-badge.large {
   padding: 8px 13px;
   font-size: 0.86rem;
+}
+
+.status-heart {
+  line-height: 1;
 }
 
 .mini-badge {

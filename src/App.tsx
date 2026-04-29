@@ -88,7 +88,7 @@ const STATUS_DISPLAY_LABELS: Record<ItemStatus, string> = {
   "필요사유 확인": "필요사유 확인",
   "자리확인 필요": "자리확인",
   "입주조건 보완 필요": "입주조건 확인",
-  "현장방문 대기": "현장방문",
+  "현장방문 대기": "현장방문 스티커",
   승인보류: "승인보류",
   "입주승인 가능": "입주승인 가능",
   입주완료: "입주완료",
@@ -108,6 +108,14 @@ function hasPendingVisit(item: MulsimItem) {
 }
 
 const TABS: TabKey[] = ["기본정보", "필요사유", "자리확인", "입주조건", "현장방문", "사후관리"];
+const TAB_DISPLAY_LABELS: Record<TabKey, string> = {
+  기본정보: "기본정보",
+  필요사유: "필요사유",
+  자리확인: "자리확인",
+  입주조건: "입주조건",
+  현장방문: "현장방문 스티커",
+  사후관리: "사후관리",
+};
 
 const CONDITION_LABELS: Array<[keyof Omit<ConditionChecks, "categoryChecklist" | "memo">, string]> = [
   ["readyToUse", "바로 쓸 준비가 되었어요"],
@@ -122,8 +130,8 @@ function getStatusSelectLabel(status: ItemStatus) {
   return STATUS_DISPLAY_LABELS[status];
 }
 
-function getStatusBadgeLabel(item: MulsimItem) {
-  return `♡ ${needsDecision(item) ? "아래 결정을 내려주세요" : STATUS_DISPLAY_LABELS[item.status]} ♡`;
+function getStatusBadgeText(item: MulsimItem) {
+  return needsDecision(item) ? "아래 결정을 내려주세요" : STATUS_DISPLAY_LABELS[item.status];
 }
 
 function getStatusMessage(item: MulsimItem) {
@@ -149,6 +157,20 @@ function areReviewStepsComplete(item: MulsimItem) {
   const hasVisitCheck = !hasPendingVisit(item);
 
   return hasBasicInfo && hasNeedReason && hasSpaceCheck && hasConditionCheck && hasVisitCheck;
+}
+
+function StatusBadge({ item, large = false }: { item: MulsimItem; large?: boolean }) {
+  return (
+    <span className={large ? "status-badge large" : "status-badge"}>
+      <span className="status-heart" aria-hidden="true">
+        ♡
+      </span>
+      <span>{getStatusBadgeText(item)}</span>
+      <span className="status-heart" aria-hidden="true">
+        ♡
+      </span>
+    </span>
+  );
 }
 
 const AFTERCARE_PERIOD_OPTIONS: AftercareRecord["period"][] = ["하루", "한주", "한달", "세달", "일년"];
@@ -413,7 +435,7 @@ function HomePage({
       <section className="summary-grid" aria-label="심사 요약">
         <SummaryCard label="심사대기" value={summary.waiting} icon={<ClipboardList size={21} />} />
         <SummaryCard label="자리확인" value={summary.space} icon={<Home size={21} />} />
-        <SummaryCard label="현장방문" value={summary.visit} icon={<Sparkles size={21} />} />
+        <SummaryCard label="현장방문 스티커" value={summary.visit} icon={<Sparkles size={21} />} />
         <SummaryCard label="사후관리 대기" value={summary.aftercare} icon={<CalendarDays size={21} />} />
       </section>
 
@@ -508,7 +530,7 @@ function ItemCard({
       <div className="item-card-body">
         <div className="card-title-row">
           <h3>{item.name}</h3>
-          <span className="status-badge">{getStatusBadgeLabel(item)}</span>
+          <StatusBadge item={item} />
         </div>
         <div className="item-meta">
           <span>{formatPrice(item.price)}</span>
@@ -766,7 +788,7 @@ function DetailPage({
               <span className="eyebrow">{item.category}</span>
               <h1>{item.name}</h1>
             </div>
-            <span className="status-badge large">{getStatusBadgeLabel(item)}</span>
+            <StatusBadge item={item} large />
           </div>
           <p>{getStatusMessage(item)}</p>
           <div className="detail-stats">
@@ -812,7 +834,7 @@ function DetailPage({
             type="button"
             onClick={() => onActiveTabChange(tab)}
           >
-            {tab}
+            {TAB_DISPLAY_LABELS[tab]}
           </button>
         ))}
       </nav>
