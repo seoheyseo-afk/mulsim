@@ -85,7 +85,7 @@ const STATUS_MESSAGES: Record<ItemStatus, string> = {
 const VISIT_NO_LONGER_REQUIRED_STATUSES: ItemStatus[] = ["입주완료", "사후관리 대기", "심사종료"];
 
 function needsVisitCheck(item: MulsimItem) {
-  return !VISIT_NO_LONGER_REQUIRED_STATUSES.includes(item.status);
+  return item.aftercare.length === 0 && !VISIT_NO_LONGER_REQUIRED_STATUSES.includes(item.status);
 }
 
 function hasPendingVisit(item: MulsimItem) {
