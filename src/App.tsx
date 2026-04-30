@@ -9,6 +9,7 @@ import {
   ClipboardList,
   Download,
   Eraser,
+  ExternalLink,
   Eye,
   EyeOff,
   Home,
@@ -78,7 +79,7 @@ const STATUS_MESSAGES: Record<ItemStatus, string> = {
   승인보류: "조금 더 지켜본 뒤 다시 심사해도 괜찮아요.",
   "입주승인 가능": "필요사유와 자리확인이 충분해요.",
   입주완료: "이 물건이 내 방에 들어왔어요.",
-  "사후관리 대기": "실제로 잘 쓰고 있는지 확인할 때예요.",
+  "사후관리 대기": "실제로 잘 쓰고 있는지 기록하고 있어요.",
   심사종료: "관심이 사라져 심사를 마무리했어요.",
 };
 
@@ -92,7 +93,7 @@ const STATUS_DISPLAY_LABELS: Record<ItemStatus, string> = {
   승인보류: "승인보류",
   "입주승인 가능": "입주승인 가능",
   입주완료: "입주완료",
-  "사후관리 대기": "사후관리 대기",
+  "사후관리 대기": "사후관리",
   심사종료: "심사종료",
 };
 
@@ -148,18 +149,31 @@ function needsDecision(item: MulsimItem) {
   return !DECISION_STATUSES.includes(item.status) && areReviewStepsComplete(item);
 }
 
+function hasAnySpaceCheck(spaceCheck: SpaceCheck) {
+  return (
+    Boolean(spaceCheck.location.trim()) ||
+    spaceCheck.cleared ||
+    spaceCheck.needsRemoval ||
+    spaceCheck.hasStorage ||
+    spaceCheck.easyAccess ||
+    spaceCheck.tooSmall ||
+    Boolean(spaceCheck.memo.trim())
+  );
+}
+
+function advanceToSpaceStatus(status: ItemStatus) {
+  return ["상담접수", "서류검토", "필요사유 확인"].includes(status) ? "자리확인 필요" : status;
+}
+
+function advanceToConditionStatus(status: ItemStatus) {
+  return ["상담접수", "서류검토", "필요사유 확인", "자리확인 필요"].includes(status) ? "입주조건 보완 필요" : status;
+}
+
 function areReviewStepsComplete(item: MulsimItem) {
   const hasBasicInfo = Boolean(item.name.trim());
   const hasNeedReason =
     item.reasons.length > 0 || Boolean(item.desireReason.trim()) || Boolean(item.expectedEffect.trim());
-  const hasSpaceCheck =
-    Boolean(item.spaceCheck.location.trim()) ||
-    item.spaceCheck.cleared ||
-    item.spaceCheck.needsRemoval ||
-    item.spaceCheck.hasStorage ||
-    item.spaceCheck.easyAccess ||
-    item.spaceCheck.tooSmall ||
-    Boolean(item.spaceCheck.memo.trim());
+  const hasSpaceCheck = hasAnySpaceCheck(item.spaceCheck);
   const hasConditionCheck =
     CONDITION_LABELS.some(([key]) => Boolean(item.conditionChecks[key])) ||
     item.conditionChecks.categoryChecklist.some((check) => check.checked) ||
@@ -185,6 +199,7 @@ function StatusBadge({ item, large = false }: { item: MulsimItem; large?: boolea
 
 const AFTERCARE_PERIOD_OPTIONS: AftercareRecord["period"][] = ["하루", "한주", "한달", "세달", "일년"];
 const DAILY_USAGE_VALUE = 366;
+const UPLOAD_DATA_URL_FALLBACK_LIMIT = 900_000;
 
 const STICKER_PRESETS: Array<{
   stickerType: StickerType;
@@ -323,13 +338,15 @@ function App() {
 
   const createItem = async (draft: IntakeDraft, file: File | null) => {
     let imageId: string | undefined;
+    let uploadedImageDataUrl: string | undefined;
     if (file) {
       const uploaded = await saveUploadedImage(file);
       imageId = uploaded.id;
+      uploadedImageDataUrl = shouldKeepUploadDataUrlFallback(uploaded) ? uploaded.dataUrl : undefined;
       setImageSources((current) => ({ ...current, [uploaded.id]: uploaded.dataUrl }));
     }
 
-    const item = createItemFromDraft(draft, imageId);
+    const item = { ...createItemFromDraft(draft, imageId), uploadedImageDataUrl };
     setItems((current) => [item, ...current]);
     setSelectedId(item.id);
     setActiveTab("기본정보");
@@ -339,7 +356,11 @@ function App() {
   const uploadForItem = async (itemId: string, file: File) => {
     const uploaded = await saveUploadedImage(file);
     setImageSources((current) => ({ ...current, [uploaded.id]: uploaded.dataUrl }));
-    updateItem(itemId, (item) => ({ ...item, imageId: uploaded.id }));
+    updateItem(itemId, (item) => ({
+      ...item,
+      imageId: uploaded.id,
+      uploadedImageDataUrl: shouldKeepUploadDataUrlFallback(uploaded) ? uploaded.dataUrl : undefined,
+    }));
   };
 
   const withdrawItem = (itemId: string) => {
@@ -420,7 +441,7 @@ function HomePage({
       waiting: items.filter((item) => !["입주완료", "심사종료"].includes(item.status)).length,
       space: items.filter((item) => item.status === "자리확인 필요" || !item.spaceCheck.location).length,
       visit: items.filter(hasPendingVisit).length,
-      aftercare: items.filter((item) => item.status === "사후관리 대기").length,
+      aftercare: items.filter((item) => item.status === "입주완료" || item.status === "사후관리 대기").length,
     }),
     [items],
   );
@@ -446,7 +467,7 @@ function HomePage({
         <SummaryCard label="심사대기" value={summary.waiting} icon={<ClipboardList size={21} />} />
         <SummaryCard label="자리확인" value={summary.space} icon={<Home size={21} />} />
         <SummaryCard label="현장방문" value={summary.visit} icon={<Sparkles size={21} />} />
-        <SummaryCard label="사후관리 대기" value={summary.aftercare} icon={<CalendarDays size={21} />} />
+        <SummaryCard label="사후관리" value={summary.aftercare} icon={<CalendarDays size={21} />} />
       </section>
 
       <section className="list-section">
@@ -621,7 +642,7 @@ function IntakeModal({
           <label>
             링크
             <input
-              type="url"
+              inputMode="url"
               value={draft.link}
               onChange={(event) => updateDraft("link", event.target.value)}
               placeholder="https://"
@@ -646,7 +667,7 @@ function IntakeModal({
             직접 이미지 업로드
             <input
               type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
+              accept="image/*"
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
             />
           </label>
@@ -658,7 +679,7 @@ function IntakeModal({
             기대하는 효과
             <textarea value={draft.expectedEffect} onChange={(event) => updateDraft("expectedEffect", event.target.value)} />
           </label>
-          <label>
+          <label className="date-field">
             처음 사고 싶어진 날짜
             <input
               type="date"
@@ -668,7 +689,11 @@ function IntakeModal({
           </label>
           <label className="span-2">
             메모
-            <textarea value={draft.memo} onChange={(event) => updateDraft("memo", event.target.value)} />
+            <textarea
+              value={draft.memo}
+              onChange={(event) => updateDraft("memo", event.target.value)}
+              placeholder="망설이는 이유, 할인 정보, 비교 후보, 기다렸다 살 이유를 적어둘 수 있어요."
+            />
           </label>
 
           <p className="notice span-2">
@@ -898,6 +923,8 @@ function BasicInfoTab({
   onUploadImage: (file: File) => Promise<void>;
   onWithdraw: () => void;
 }) {
+  const productLink = normalizeExternalLink(item.link);
+
   const setField = (key: keyof MulsimItem, value: string) => {
     onChange({ ...item, [key]: value });
   };
@@ -930,10 +957,28 @@ function BasicInfoTab({
               onChange={(event) => setField("price", formatPriceInput(event.target.value))}
             />
           </label>
-          <label>
-            링크
-            <input value={item.link} onChange={(event) => setField("link", event.target.value)} />
-          </label>
+          <div className="field-with-action">
+            <label>
+              링크
+              <input
+                inputMode="url"
+                value={item.link}
+                onChange={(event) => setField("link", event.target.value)}
+                placeholder="https://"
+              />
+            </label>
+            {productLink ? (
+              <a className="ghost-button field-action-button" href={productLink} target="_blank" rel="noreferrer">
+                <ExternalLink size={16} />
+                링크 열기
+              </a>
+            ) : (
+              <button className="ghost-button field-action-button" type="button" disabled>
+                <ExternalLink size={16} />
+                링크 열기
+              </button>
+            )}
+          </div>
           <CategoryField
             value={item.category}
             categories={categories}
@@ -955,7 +1000,7 @@ function BasicInfoTab({
           </label>
           <label>
             이미지 업로드
-            <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleUpload} />
+            <input type="file" accept="image/*" onChange={handleUpload} />
           </label>
           {imageSrc ? (
             <ImagePreviewEditor
@@ -972,13 +1017,17 @@ function BasicInfoTab({
             기대하는 효과
             <textarea value={item.expectedEffect} onChange={(event) => setField("expectedEffect", event.target.value)} />
           </label>
-          <label>
+          <label className="date-field">
             처음 사고 싶어진 날짜
             <input type="date" value={item.firstWantedDate} onChange={(event) => setField("firstWantedDate", event.target.value)} />
           </label>
           <label className="span-2">
             메모
-            <textarea value={item.memo} onChange={(event) => setField("memo", event.target.value)} />
+            <textarea
+              value={item.memo}
+              onChange={(event) => setField("memo", event.target.value)}
+              placeholder="망설이는 이유, 할인 정보, 비교 후보, 기다렸다 살 이유를 적어둘 수 있어요."
+            />
           </label>
         </div>
       </section>
@@ -1131,7 +1180,7 @@ function NeedReasonTab({ item, onChange }: { item: MulsimItem; onChange: (item: 
           <h2>필요사유 기록</h2>
         </div>
         <form className="form-grid compact" onSubmit={addReason}>
-          <label>
+          <label className="date-field">
             날짜
             <input type="date" value={draft.date} onChange={(event) => updateDraft("date", event.target.value)} />
           </label>
@@ -1228,7 +1277,7 @@ function SpaceCheckTab({ item, onChange }: { item: MulsimItem; onChange: (item: 
     onChange({
       ...item,
       spaceCheck: next,
-      status: key === "location" && String(value).trim() ? "입주조건 보완 필요" : item.status,
+      status: hasAnySpaceCheck(next) ? advanceToSpaceStatus(item.status) : item.status,
     });
   };
 
@@ -1268,7 +1317,7 @@ function ConditionsTab({ item, onChange }: { item: MulsimItem; onChange: (item: 
     onChange({
       ...item,
       conditionChecks: { ...item.conditionChecks, [key]: value },
-      status: item.status === "자리확인 필요" ? "입주조건 보완 필요" : item.status,
+      status: advanceToConditionStatus(item.status),
     });
   };
 
@@ -1414,7 +1463,7 @@ function RoomPlanner({
       id: makeId("place"),
       type: "item",
       name: item.name,
-      imageSrc: item.imageUrl || undefined,
+      imageSrc: item.uploadedImageDataUrl || item.imageUrl || undefined,
       imageId: item.imageId,
       x: 44,
       y: 38,
@@ -1806,12 +1855,21 @@ function AftercareTab({ item, onChange }: { item: MulsimItem; onChange: (item: M
     setDraft((current) => ({ ...current, [key]: value }));
   };
 
+  const hasConcern = hasAftercareConcern(draft);
+
   const addRecord = (event: FormEvent) => {
     event.preventDefault();
     onChange({
       ...item,
       status: item.status === "입주완료" ? "사후관리 대기" : item.status,
-      aftercare: [{ id: makeId("aftercare"), ...draft }, ...item.aftercare],
+      aftercare: [
+        {
+          id: makeId("aftercare"),
+          ...draft,
+          regretReason: hasConcern ? draft.regretReason : "",
+        },
+        ...item.aftercare,
+      ],
     });
     setDraft({
       period: "하루",
@@ -1867,12 +1925,12 @@ function AftercareTab({ item, onChange }: { item: MulsimItem; onChange: (item: M
             />
             <span className="range-value">{formatUsageCount(draft.usageCount)}</span>
           </label>
-          <label className="aftercare-regret">
-            후회한다면 이유
+          <label className="aftercare-memo">
+            메모
             <textarea
-              value={draft.regretReason}
-              onChange={(event) => updateDraft("regretReason", event.target.value)}
-              placeholder="예: 상세컷에 속았다... 가성비 야호... 마감이 왜 이래요... 귀여운데 손 많이 감... 자리값 못하는 중... 존재감 과다... 생각보다 안 친해짐... 쓰려면 각오 필요... 세팅부터 기력 소진... 관리 난이도 무슨 일... 후기 믿을 걸... 가격표가 제일 성실함"
+              value={draft.memo}
+              onChange={(event) => updateDraft("memo", event.target.value)}
+              placeholder="실제로 자주 쓰는지, 어디에 두니 편한지, 다음엔 뭘 다르게 볼지 적어둘 수 있어요."
             />
           </label>
           <div className="aftercare-check-stack">
@@ -1881,10 +1939,16 @@ function AftercareTab({ item, onChange }: { item: MulsimItem; onChange: (item: M
             <CheckRow label="설치는 예상보다 쉬웠는지" checked={draft.installEasy} onChange={(checked) => updateDraft("installEasy", checked)} />
             <CheckRow label="다시 돌아가도 살 건지" checked={draft.wouldBuyAgain} onChange={(checked) => updateDraft("wouldBuyAgain", checked)} />
           </div>
-          <label className="span-2">
-            메모
-            <textarea value={draft.memo} onChange={(event) => updateDraft("memo", event.target.value)} />
-          </label>
+          {hasConcern ? (
+            <label className="span-2 aftercare-regret">
+              후회한다면 이유
+              <textarea
+                value={draft.regretReason}
+                onChange={(event) => updateDraft("regretReason", event.target.value)}
+                placeholder="예: 상세컷에 속았다... 가성비 야호... 마감이 왜 이래요... 귀여운데 손 많이 감... 자리값 못하는 중... 존재감 과다... 생각보다 안 친해짐... 쓰려면 각오 필요... 세팅부터 기력 소진... 관리 난이도 무슨 일... 후기 믿을 걸... 가격표가 제일 성실함"
+              />
+            </label>
+          ) : null}
           <div className="span-2 form-actions">
             <button className="primary-button" type="submit">
               <Plus size={17} />
@@ -1996,6 +2060,10 @@ function getAftercareUsageStatus(record: AftercareRecord) {
   return record.usingWell ? "잘 쓰는 중" : "아직 애매함";
 }
 
+function hasAftercareConcern(record: Pick<AftercareRecord, "usingWell" | "placeOk" | "installEasy" | "wouldBuyAgain">) {
+  return !record.usingWell || !record.placeOk || !record.installEasy || !record.wouldBuyAgain;
+}
+
 function CheckRow({
   label,
   checked,
@@ -2041,7 +2109,29 @@ function resolveItemImage(item: MulsimItem, imageSources: ImageSources) {
   if (item.imageId && imageSources[item.imageId]) {
     return imageSources[item.imageId];
   }
+  if (item.uploadedImageDataUrl) {
+    return item.uploadedImageDataUrl;
+  }
   return item.imageUrl || undefined;
+}
+
+function shouldKeepUploadDataUrlFallback(uploaded: { dataUrl: string; persisted: boolean }) {
+  return !uploaded.persisted || uploaded.dataUrl.length <= UPLOAD_DATA_URL_FALLBACK_LIMIT;
+}
+
+function normalizeExternalLink(link: string) {
+  const trimmed = link.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const withProtocol = /^[a-z][a-z\d+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const url = new URL(withProtocol);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
 }
 
 function formatPrice(price: string) {

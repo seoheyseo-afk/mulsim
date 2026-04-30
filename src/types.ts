@@ -121,6 +121,7 @@ export interface MulsimItem {
   link: string;
   imageUrl: string;
   imageId?: string;
+  uploadedImageDataUrl?: string;
   imagePreview?: ImagePreviewFrame;
   category: string;
   desireReason: string;

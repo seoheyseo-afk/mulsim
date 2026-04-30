@@ -42,7 +42,12 @@ export function loadItems(): MulsimItem[] | null {
 }
 
 export function saveItems(items: MulsimItem[]) {
-  localStorage.setItem(ITEMS_KEY, JSON.stringify(items));
+  try {
+    localStorage.setItem(ITEMS_KEY, JSON.stringify(items));
+  } catch {
+    const itemsWithoutUploadFallbacks = items.map(({ uploadedImageDataUrl, ...item }) => item);
+    localStorage.setItem(ITEMS_KEY, JSON.stringify(itemsWithoutUploadFallbacks));
+  }
 }
 
 function isOnlyLegacySampleItems(items: MulsimItem[]) {
@@ -183,7 +188,7 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
-export async function saveUploadedImage(file: File): Promise<{ id: string; dataUrl: string }> {
+export async function saveUploadedImage(file: File): Promise<{ id: string; dataUrl: string; persisted: boolean }> {
   const dataUrl = await fileToDataUrl(file);
   const id = `img_${crypto.randomUUID?.() ?? `${Date.now()}_${Math.random().toString(16).slice(2)}`}`;
   const record: StoredImage = {
@@ -195,29 +200,43 @@ export async function saveUploadedImage(file: File): Promise<{ id: string; dataU
     createdAt: new Date().toISOString(),
   };
 
-  const db = await openImageDb();
+  try {
+    const db = await openImageDb();
 
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).put(record);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      tx.objectStore(STORE_NAME).put(record);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
 
-  db.close();
-  return { id, dataUrl };
+    db.close();
+    return { id, dataUrl, persisted: true };
+  } catch {
+    return { id, dataUrl, persisted: false };
+  }
 }
 
 export async function getUploadedImage(id: string): Promise<string | null> {
-  const db = await openImageDb();
+  let db: IDBDatabase;
+  try {
+    db = await openImageDb();
+  } catch {
+    return null;
+  }
 
-  const record = await new Promise<StoredImage | undefined>((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const request = tx.objectStore(STORE_NAME).get(id);
-    request.onsuccess = () => resolve(request.result as StoredImage | undefined);
-    request.onerror = () => reject(request.error);
-  });
+  try {
+    const record = await new Promise<StoredImage | undefined>((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const request = tx.objectStore(STORE_NAME).get(id);
+      request.onsuccess = () => resolve(request.result as StoredImage | undefined);
+      request.onerror = () => reject(request.error);
+    });
 
-  db.close();
-  return record?.dataUrl ?? null;
+    db.close();
+    return record?.dataUrl ?? null;
+  } catch {
+    db.close();
+    return null;
+  }
 }
