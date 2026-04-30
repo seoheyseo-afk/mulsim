@@ -439,7 +439,7 @@ function HomePage({
   const summary = useMemo(
     () => ({
       waiting: items.filter((item) => !["입주완료", "심사종료"].includes(item.status)).length,
-      space: items.filter((item) => item.status === "자리확인 필요" || !item.spaceCheck.location).length,
+      space: items.filter((item) => !hasAnySpaceCheck(item.spaceCheck)).length,
       visit: items.filter(hasPendingVisit).length,
       aftercare: items.filter((item) => item.status === "입주완료" || item.status === "사후관리 대기").length,
     }),

@@ -665,14 +665,33 @@ a {
   min-width: 0;
 }
 
+.date-field {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
 .form-grid input[type="date"] {
   display: block;
+  appearance: none;
+  -webkit-appearance: none;
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
+  min-inline-size: 0;
   max-width: 100%;
   inline-size: 100%;
   max-inline-size: 100%;
+}
+
+.form-grid input[type="date"]::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
+}
+
+.form-grid input[type="date"]::-webkit-datetime-edit {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .field-with-action {
